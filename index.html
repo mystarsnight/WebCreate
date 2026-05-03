@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Mini Builder Pro</title>
+<title>WebCreate</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial;
-    background: #0b1220;
+    background: #0a0f1f;
     color: white;
 }
 
@@ -33,17 +33,23 @@ body {
 /* ELEMENT */
 .el {
     position: absolute;
-    min-width: 50px;
-    min-height: 50px;
-    background: red;
-    border: 2px solid transparent;
+    width: 120px;
+    height: 120px;
+    background: #ef4444;
     cursor: move;
     user-select: none;
 }
 
+/* TEXT */
+.text {
+    background: transparent;
+    color: white;
+    font-size: 18px;
+}
+
 /* SELECTED */
 .selected {
-    border: 2px solid cyan;
+    outline: 2px solid #00ffff;
 }
 
 /* RESIZE HANDLE */
@@ -62,10 +68,12 @@ body {
 <body>
 
 <div id="toolbar">
-    <button onclick="addBox()">Add Box</button>
-    <button onclick="addText()">Add Text</button>
+    <b>WebCreate</b>
 
-    <input type="color" id="colorPicker" onchange="setColor(this.value)">
+    <button onclick="addBox()">Box</button>
+    <button onclick="addText()">Text</button>
+
+    <input type="color" id="colorPicker" onchange="changeColor(this.value)">
 
     <input id="sitename" placeholder="site name">
 
@@ -78,8 +86,8 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script>
 const supabase = window.supabase.createClient(
-    "YOUR_URL",
-    "YOUR_ANON_KEY"
+  "https://jsqciahlfzqywojpfvwg.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzcWNpYWhsZnpxeXdvanBmdndnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NjczOTEsImV4cCI6MjA5MzM0MzM5MX0.R1-5b5Os93YGEvpnhUGD9OLq1UXve319mQU0DeUf5ug"
 );
 
 let selected = null;
@@ -88,18 +96,16 @@ let selected = null;
 
 function createElement(type) {
     let el = document.createElement("div");
-    el.className = "el";
+    el.classList.add("el");
 
     if (type === "text") {
+        el.classList.add("text");
         el.innerText = "Text";
         el.style.background = "transparent";
-        el.style.color = "white";
     }
 
     el.style.left = "100px";
     el.style.top = "100px";
-    el.style.width = "100px";
-    el.style.height = "100px";
 
     enableDrag(el);
     enableSelect(el);
@@ -121,17 +127,12 @@ function addText() {
 function enableSelect(el) {
     el.onclick = (e) => {
         e.stopPropagation();
-        select(el);
+        if (selected) selected.classList.remove("selected");
+        selected = el;
+        el.classList.add("selected");
     };
 }
 
-function select(el) {
-    if (selected) selected.classList.remove("selected");
-    selected = el;
-    el.classList.add("selected");
-}
-
-/* deselect */
 document.getElementById("canvas").onclick = () => {
     if (selected) selected.classList.remove("selected");
     selected = null;
@@ -143,15 +144,15 @@ function enableDrag(el) {
     el.onmousedown = function(e) {
         if (e.target.classList.contains("resize")) return;
 
-        let offsetX = e.offsetX;
-        let offsetY = e.offsetY;
+        let ox = e.offsetX;
+        let oy = e.offsetY;
 
         document.onmousemove = function(e) {
-            el.style.left = (e.pageX - offsetX) + "px";
-            el.style.top = (e.pageY - offsetY) + "px";
+            el.style.left = (e.pageX - ox) + "px";
+            el.style.top = (e.pageY - oy) + "px";
         };
 
-        document.onmouseup = function() {
+        document.onmouseup = () => {
             document.onmousemove = null;
         };
     };
@@ -160,27 +161,27 @@ function enableDrag(el) {
 /* ---------------- RESIZE ---------------- */
 
 function enableResize(el) {
-    let handle = document.createElement("div");
-    handle.className = "resize";
-    el.appendChild(handle);
+    let r = document.createElement("div");
+    r.className = "resize";
+    el.appendChild(r);
 
-    handle.onmousedown = function(e) {
+    r.onmousedown = function(e) {
         e.stopPropagation();
 
         document.onmousemove = function(e) {
-            el.style.width = e.pageX - el.offsetLeft + "px";
-            el.style.height = e.pageY - el.offsetTop + "px";
+            el.style.width = (e.pageX - el.offsetLeft) + "px";
+            el.style.height = (e.pageY - el.offsetTop) + "px";
         };
 
-        document.onmouseup = function() {
+        document.onmouseup = () => {
             document.onmousemove = null;
         };
     };
 }
 
-/* ---------------- COLOR ---------------- */
+/* ---------------- COLOR CHANGE ---------------- */
 
-function setColor(color) {
+function changeColor(color) {
     if (!selected) return;
     selected.style.background = color;
 }
@@ -190,11 +191,11 @@ function setColor(color) {
 function exportHTML() {
     let html = document.getElementById("canvas").innerHTML;
     console.log(html);
-    alert("HTML copied to console!");
+    alert("HTML exported to console");
     return html;
 }
 
-/* ---------------- SUPABASE PUBLISH ---------------- */
+/* ---------------- PUBLISH ---------------- */
 
 async function publish() {
     let name = document.getElementById("sitename").value;
@@ -207,7 +208,7 @@ async function publish() {
         .insert([{ name, html }]);
 
     if (error) {
-        alert("Name already exists or error");
+        alert("Name already exists");
     } else {
         alert("Published!");
     }
@@ -225,7 +226,6 @@ async function loadSite(name) {
     if (data) {
         document.getElementById("canvas").innerHTML = data.html;
 
-        // re-enable interactions
         document.querySelectorAll(".el").forEach(el => {
             enableDrag(el);
             enableSelect(el);
